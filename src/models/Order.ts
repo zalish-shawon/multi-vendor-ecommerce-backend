@@ -28,6 +28,11 @@ const OrderSchema: Schema = new Schema({
     enum: ['PENDING', 'PAID', 'FAILED'], 
     default: 'PENDING' 
   },
+  order_status: {
+    type: String,
+    enum: ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'],
+    default: 'PROCESSING'
+  },
   transaction_id: { type: String, unique: true },
   shipping_address: { type: String, required: true }
 }, { timestamps: true });

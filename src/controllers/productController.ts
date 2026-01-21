@@ -9,9 +9,6 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     const { name, description, price, category, stock, images } = req.body;
     const userId = req.user?.id;
 
-    // Find the Vendor Profile associated with this User
-    // (In a real app, you'd auto-create a Vendor profile on registration, 
-    // but for now, we'll check if one exists or create a placeholder)
     let vendor = await Vendor.findOne({ user_id: userId });
 
     if (!vendor) {
@@ -42,11 +39,111 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // 2. Get All Products (Public)
-export const getAllProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllProducts = async (req: AuthRequest, res: Response) => {
   try {
-    const products = await Product.find().populate('vendor_id', 'shop_name');
-    res.json(products);
+    // 1. Destructure Query Params
+    const { searchTerm, category, minPrice, maxPrice, sortBy, page = 1, limit = 10 } = req.query;
+
+    // 2. Build the Filter Object
+    let filter: any = {};
+
+    // Search Logic (Regex for partial match, case insensitive)
+    if (searchTerm) {
+        filter.$or = [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { description: { $regex: searchTerm, $options: 'i' } }
+        ];
+    }
+
+    // Exact Filter
+    if (category) {
+        filter.category = category;
+    }
+
+    // Range Filter
+    if (minPrice || maxPrice) {
+        filter.price = {};
+        if (minPrice) filter.price.$gte = Number(minPrice); // Greater than
+        if (maxPrice) filter.price.$lte = Number(maxPrice); // Less than
+    }
+
+    // 3. Sorting Logic
+    let sortOptions: any = {};
+    if (sortBy === 'price_asc') sortOptions.price = 1;
+    if (sortBy === 'price_desc') sortOptions.price = -1;
+    if (sortBy === 'newest') sortOptions.createdAt = -1;
+
+    // 4. Pagination Logic
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // 5. Execute Query
+    const products = await Product.find(filter)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('vendor_id', 'shop_name');
+
+    // 6. Get Total Count (For frontend pagination UI)
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+        products,
+        meta: {
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(total / Number(limit))
+        }
+    });
+
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+// Update Product
+export const updateProduct = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    // 1. Check if product exists
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // 2. Verify Ownership (Is this YOUR product?)
+    const vendor = await Vendor.findOne({ user_id: userId });
+    if (!vendor || product.vendor_id.toString() !== vendor._id.toString()) {
+        return res.status(403).json({ message: 'You can only update your own products' });
+    }
+
+    // 3. Update
+    const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
+    res.json(updatedProduct);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
+  }
+};
+
+// Delete Product
+export const deleteProduct = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    const vendor = await Vendor.findOne({ user_id: userId });
+    if (!vendor || product.vendor_id.toString() !== vendor._id.toString()) {
+        return res.status(403).json({ message: 'You can only delete your own products' });
+    }
+
+    await Product.findByIdAndDelete(id);
+    res.json({ message: 'Product deleted successfully' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
