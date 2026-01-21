@@ -22,27 +22,36 @@ export const getMyProfile = async (req: AuthRequest, res: Response) => {
 // Update Profile
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, phone, shop_name, shop_logo } = req.body;
+    const { name, phone, shop_name } = req.body;
+    const userId = req.user?.id;
     
-    // 1. Update User Basic Info
-    const user = await User.findByIdAndUpdate(
-        req.user?.id, 
-        { name, phone }, 
-        { new: true }
-    ).select('-passwordHash');
+    // Get the Image URL if a file was uploaded
+    // Multer adds 'req.file'
+    const imageURL = req.file ? req.file.path : undefined; 
 
-    // 2. If Vendor, Update Vendor Info
+    // 1. Update User
+    const userData: any = { name, phone };
+    // If user uploaded a profile pic (optional logic based on your User model)
+    if (imageURL) userData.profileImg = imageURL; 
+
+    const user = await User.findByIdAndUpdate(userId, userData, { new: true });
+
+    // 2. Update Vendor (If exists)
     let vendor = null;
     if (user?.role === 'VENDOR') {
+        const vendorData: any = { shop_name };
+        if (imageURL) vendorData.shop_logo = imageURL; // Update Logo
+
         vendor = await Vendor.findOneAndUpdate(
-            { user_id: user._id },
-            { shop_name, shop_logo },
+            { user_id: userId },
+            vendorData,
             { new: true }
         );
     }
 
     res.json({ user, vendor });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating profile' });
+    res.status(500).json({ message: 'Error updating profile', error });
   }
 };
+

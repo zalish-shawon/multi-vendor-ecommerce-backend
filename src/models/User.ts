@@ -6,6 +6,7 @@ export interface IUser extends Document {
   passwordHash: string;
   role: 'ADMIN' | 'VENDOR' | 'CUSTOMER';
   phone?: string;
+  profileImg?: string; // 
 }
 
 const UserSchema: Schema = new Schema({
@@ -17,7 +18,8 @@ const UserSchema: Schema = new Schema({
     enum: ['ADMIN', 'VENDOR', 'CUSTOMER'], 
     default: 'CUSTOMER' 
   },
-  phone: { type: String } // Useful for bKash/Nagad contact
+  phone: { type: String },
+  profileImg: { type: String } // 
 }, { timestamps: true });
 
 export default mongoose.model<IUser>('User', UserSchema);

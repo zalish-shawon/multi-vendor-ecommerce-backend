@@ -4,35 +4,34 @@ import Vendor from '../models/Vendor';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 // 1. Create a Product (Vendor Only)
-export const createProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createProduct = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, price, category, stock, images } = req.body;
+    const { name, description, price, category, stock } = req.body;
+    
+    // Multer adds 'req.files' (Array) for multiple uploads
+    const files = (req.files as Express.Multer.File[]) || [];
+    const images = files.map(file => file.path); // Extract URLs
+
+    // Find vendor from authenticated user
     const userId = req.user?.id;
-
-    let vendor = await Vendor.findOne({ user_id: userId });
-
+    const vendor = await Vendor.findOne({ user_id: userId });
     if (!vendor) {
-      // Auto-create a vendor profile if it doesn't exist (for simplicity now)
-      vendor = new Vendor({
-        user_id: userId,
-        shop_name: `Shop-${userId}`, 
-        is_verified: true
-      });
-      await vendor.save();
+      return res.status(403).json({ message: 'Only vendors can create products' });
     }
 
     const newProduct = new Product({
-      vendor_id: vendor._id, // Link product to the Vendor ID, not User ID
+      vendor_id: vendor._id,
       name,
       description,
-      price,
+      price: Number(price), // Important: Convert string to number
+      stock: Number(stock),
       category,
-      stock,
-      images
+      images: images // Save the array of Cloudinary URLs
     });
 
     await newProduct.save();
-    res.status(201).json({ message: 'Product created successfully', product: newProduct });
+    res.status(201).json(newProduct);
+
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }

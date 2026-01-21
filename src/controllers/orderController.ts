@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/authMiddleware';
 import Order from '../models/Order';
@@ -196,5 +196,25 @@ export const deleteOrder = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting order' });
+  }
+};
+
+// 6. PUBLIC TRACKING (No Login Required)
+export const trackOrderPublic = async (req: Request, res: Response) => {
+  try {
+    const { trackingId } = req.params; // This will be the transaction_id
+
+    // Only select safe fields (Don't show customer email/phone to public)
+    const order = await Order.findOne({ transaction_id: trackingId })
+        .select('order_status payment_status total_amount createdAt products')
+        .populate('products.product_id', 'name images');
+
+    if (!order) {
+        return res.status(404).json({ message: 'Order not found with this Tracking ID' });
+    }
+
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Error tracking order' });
   }
 };

@@ -1,6 +1,7 @@
 import express from 'express';
 import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder } from '../controllers/orderController';
 import { verifyToken } from '../middleware/authMiddleware';
+import { trackOrderPublic } from '../controllers/orderController';
 
 const router = express.Router();
 
@@ -18,5 +19,8 @@ router.put('/:id/status', verifyToken, updateOrderStatus);
 
 // Delete (Admin)
 router.delete('/:id', verifyToken, deleteOrder);
+
+// Public Tracking
+router.get('/track/:trackingId', trackOrderPublic);
 
 export default router;
