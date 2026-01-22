@@ -95,3 +95,67 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+// Add a new address
+export const addAddress = async (req: AuthRequest, res: Response) => {
+  try {
+    const { details, city, postalCode } = req.body;
+    const userId = req.user?.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // If it's the first address, make it default
+    const isDefault = user.addresses.length === 0;
+
+    user.addresses.push({ details, city, postalCode, isDefault });
+    await user.save();
+
+    res.json({ message: "Address added", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error adding address", error });
+  }
+};
+
+// Delete an address
+export const deleteAddress = async (req: AuthRequest, res: Response) => {
+  try {
+    const { addressId } = req.params;
+    const userId = req.user?.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Filter out the address to delete
+    user.addresses = user.addresses.filter(addr => (addr as any)._id.toString() !== addressId);
+    
+    await user.save();
+
+    res.json({ message: "Address deleted", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting address", error });
+  }
+};
+
+// Set an address as default
+export const setDefaultAddress = async (req: AuthRequest, res: Response) => {
+  try {
+    const { addressId } = req.params;
+    const userId = req.user?.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Loop through all addresses
+    user.addresses.forEach((addr: any) => {
+      // Set TRUE only if IDs match, otherwise FALSE
+      addr.isDefault = addr._id.toString() === addressId;
+    });
+
+    await user.save();
+
+    res.json({ message: "Default address updated", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating default address", error });
+  }
+};

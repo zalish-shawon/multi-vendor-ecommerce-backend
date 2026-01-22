@@ -5,7 +5,7 @@ import { upload } from '../config/cloudinary'; // <--- Import this
 
 const router = express.Router();
 
-router.get('/', verifyToken, getMyProfile);
+router.get('/getProfile', verifyToken, getMyProfile);
 
 // Add 'upload.single' middleware BEFORE the controller
 // 'image' is the name of the field in the form-data

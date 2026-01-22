@@ -7,6 +7,15 @@ export interface IUser extends Document {
   role: 'ADMIN' | 'VENDOR' | 'CUSTOMER';
   phone?: string;
   profileImg?: string; // 
+
+  // NEW: Address Array
+  addresses: {
+    _id?: string; // Auto-generated ID for each address
+    details: string; // "House 12, Road 5..."
+    city: string;    // "Dhaka"
+    postalCode: string;
+    isDefault: boolean;
+  }[];
 }
 
 const UserSchema: Schema = new Schema({
@@ -19,7 +28,17 @@ const UserSchema: Schema = new Schema({
     default: 'CUSTOMER' 
   },
   phone: { type: String },
-  profileImg: { type: String } // 
-}, { timestamps: true });
+  profileImg: { type: String },
+  
+   addresses: [
+      {
+        details: { type: String, required: true },
+        city: { type: String, required: true },
+        postalCode: { type: String, required: true },
+        isDefault: { type: Boolean, default: false }
+      }
+    ]
+  }, 
+ { timestamps: true });
 
 export default mongoose.model<IUser>('User', UserSchema);
