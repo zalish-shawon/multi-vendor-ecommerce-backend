@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { AuthRequest } from '../middleware/authMiddleware';
 
 const SECRET_KEY = process.env.JWT_SECRET || 'mySuperSecretKey123';
 
@@ -34,6 +35,29 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+
+// Update User Profile
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, phone, address } = req.body;
+    const userId = req.user?.id;
+
+    // Prepare update data
+    const updateData: any = { name, phone, address };
+
+    // If an image file is uploaded (handled by Multer)
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+       updateData.profileImg = (req.files[0] as any).path; 
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true }).select('-password');
+
+    res.json({ message: 'Profile updated successfully', user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Profile update failed', error });
   }
 };
 

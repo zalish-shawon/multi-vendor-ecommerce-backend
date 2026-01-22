@@ -295,3 +295,39 @@ export const trackOrderPublic = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Error tracking order" });
   }
 };
+
+// 1. Cancel Order (Only if Pending)
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user_id: req.user?.id });
+
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (order.status !== 'Pending') return res.status(400).json({ message: 'Cannot cancel processed order' });
+
+    await Order.findByIdAndDelete(req.params.id); // Or set status to 'Cancelled'
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Cancellation failed', error });
+  }
+};
+
+// 2. Retry Payment (Generate New Link)
+export const retryPayment = async (req: AuthRequest, res: Response) => {
+    // Reuse the createOrder logic but for an existing order ID
+    // For simplicity, we will just re-init the SSLCommerz session here
+    try {
+        const order = await Order.findById(req.params.id);
+        if(!order) return res.status(404).json({message: "Order not found"});
+
+        // ... (Include your SSLCommerz Init Logic here, similar to createOrder)
+        // ... (Using the EXISTING transaction_id or generating a new suffix like TXN-123-RETRY)
+        
+        // Quick Fix: For this tutorial, we will rely on the frontend creating a *new* order for "Pay Later" 
+        // or effectively re-ordering. But proper "Retry" requires re-initializing SSLCommerz with the same Order ID.
+        
+        // Let's return a specific message for now:
+        res.status(501).json({ message: "Retry feature coming soon" }); 
+    } catch(err) {
+        res.status(500).json({message: "Error"});
+    }
+}

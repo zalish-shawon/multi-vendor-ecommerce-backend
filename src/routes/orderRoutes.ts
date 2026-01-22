@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder, paymentFail, paymentSuccess, getMyOrders } from '../controllers/orderController';
+import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder, paymentFail, paymentSuccess, getMyOrders, cancelOrder } from '../controllers/orderController';
 import { verifyToken } from '../middleware/authMiddleware';
 import { trackOrderPublic } from '../controllers/orderController';
 
@@ -29,5 +29,8 @@ router.get('/track/:trackingId', trackOrderPublic);
 // SSLCommerz Callbacks (Public)
 router.post('/payment/success/:tranId', paymentSuccess);
 router.post('/payment/fail/:tranId', paymentFail);
+
+// Cancel Order (Customer)
+router.delete('/:id', verifyToken, cancelOrder)
 
 export default router;
