@@ -12,4 +12,5 @@ router.post('/success/:tranId', paymentSuccess);
 router.post('/fail/:tranId', paymentFail);
 router.post('/cancel/:tranId', paymentFail); // Treat cancel as fail
 
+
 export default router;

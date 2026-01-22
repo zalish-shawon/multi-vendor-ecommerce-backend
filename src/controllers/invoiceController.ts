@@ -15,7 +15,8 @@ export const downloadInvoice = async (req: AuthRequest, res: Response) => {
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
     // 2. Security Check (Only Owner or Admin can download)
-    if (req.user?.role !== 'ADMIN' && order.customer_id._id.toString() !== req.user?.id) {
+    // We use 'customer_id' because that is what we defined in the Order Model
+if (req.user?.role === 'CUSTOMER' && order.customer_id.toString() !== req.user.id) {
         return res.status(403).json({ message: 'Access Denied' });
     }
 
@@ -38,7 +39,7 @@ export const downloadInvoice = async (req: AuthRequest, res: Response) => {
     doc.text(`Transaction ID: ${order.transaction_id}`);
     doc.moveDown();
 
-    doc.text(`Customer: ${(order.customer_id as any).name}`);
+    doc.text(`Customer: ${((order as any).customer_id as any)?.name || 'N/A'}`);
     doc.text(`Address: ${order.shipping_address}`);
     doc.moveDown();
 
