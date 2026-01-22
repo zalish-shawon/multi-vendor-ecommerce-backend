@@ -185,28 +185,43 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
+// Get all orders for the logged-in user
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
+  try {
+    // Find orders where user_id matches the logged-in user, sorted by newest first
+    const orders = await Order.find({ customer_id: req.user?.id })
+      .populate('products.product_id', 'name images') // Get product details
+      .sort({ createdAt: -1 });
+      // console.log(orders);
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders', error });
+  }
+};
+
 // 3. GET SINGLE ORDER (Detail View)
 export const getOrderById = async (req: AuthRequest, res: Response) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate("customer_id", "name email")
-      .populate("products.product_id", "name price images");
+      .populate('customer_id', 'name email')
+      .populate('products.product_id', 'name price');
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
 
-    // Security Check: You can only view if you are Admin, the Owner, or the Vendor involved
-    // (Skipping complex Vendor check for brevity, but Customer check is MUST)
-    // We use 'user_id' because that is what we defined in the Order Model
-    if (
-      req.user?.role === "CUSTOMER" &&
-      order.customer_id.toString() !== req.user.id
-    ) {
-      return res.status(403).json({ message: "Access Denied" });
+    // Security: Allow only Admin or the Owner of the order
+    // Note: We cast customer_id to any because population can make it an object or string
+    const ownerId = (order.customer_id as any)._id || order.customer_id;
+    
+    if (req.user?.role !== 'ADMIN' && ownerId.toString() !== req.user?.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
     res.json(order);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching order" });
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder, paymentFail, paymentSuccess } from '../controllers/orderController';
+import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder, paymentFail, paymentSuccess, getMyOrders } from '../controllers/orderController';
 import { verifyToken } from '../middleware/authMiddleware';
 import { trackOrderPublic } from '../controllers/orderController';
 
@@ -10,6 +10,9 @@ router.post('/create', verifyToken, createOrder);
 
 // Get All (Dynamic based on Role)
 router.get('/', verifyToken, getAllOrders);
+
+// Get My Orders (Customer)
+router.get('/my-orders', verifyToken, getMyOrders);
 
 // Get Single
 router.get('/:id', verifyToken, getOrderById);
