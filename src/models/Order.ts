@@ -32,16 +32,35 @@ const OrderSchema: Schema = new Schema(
     shipping_address: { type: String, required: true },
     phone: { type: String, required: true },
     transaction_id: { type: String, unique: true, required: true },
-    status: { 
-      type: String, 
-      enum: ['Pending', 'Paid', 'Failed', 'Shipped', 'Delivered'], 
-      default: 'Pending' 
-    },
+
     payment_status: { 
       type: String, 
       enum: ['Pending', 'Success', 'Failed'], 
       default: 'Pending' 
     },
+
+
+    // 1. Assign Delivery Person
+    delivery_person_id: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User', 
+      default: null 
+    },
+
+// 2. Current Status (Simple string for easy access)
+    order_status: {
+      type: String,
+      enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
+      default: 'Pending'
+    },
+
+    tracking_history: [
+      {
+        status: { type: String, required: true }, // e.g., "Shipped"
+        updatedAt: { type: Date, default: Date.now },
+        note: { type: String } // e.g., "Package arrived at local hub"
+      }
+    ]
   },
   { timestamps: true }
 );

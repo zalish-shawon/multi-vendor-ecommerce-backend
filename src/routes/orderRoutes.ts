@@ -2,8 +2,14 @@ import express from 'express';
 import { createOrder, getAllOrders, getOrderById, updateOrderStatus, deleteOrder, paymentFail, paymentSuccess, getMyOrders, cancelOrder } from '../controllers/orderController';
 import { verifyToken } from '../middleware/authMiddleware';
 import { trackOrderPublic } from '../controllers/orderController';
+import { assignDelivery, getMyDeliveries, updateDeliveryStatus } from '../controllers/deliveryController';
 
 const router = express.Router();
+
+// Delivery Routes
+router.post('/assign', verifyToken, assignDelivery); // Admin Only (add isAdmin if you have it)
+router.put('/status', verifyToken, updateDeliveryStatus); // Delivery Man or Admin
+router.get('/my-deliveries', verifyToken, getMyDeliveries); // Delivery Man Only
 
 // Create Order (Customer)
 router.post('/create', verifyToken, createOrder);
@@ -32,5 +38,7 @@ router.post('/payment/fail/:tranId', paymentFail);
 
 // Cancel Order (Customer)
 router.delete('/:id', verifyToken, cancelOrder)
+
+
 
 export default router;

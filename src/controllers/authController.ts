@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import User from '../models/User';
-import { AuthRequest } from '../middleware/authMiddleware';
+import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User";
+import { AuthRequest } from "../middleware/authMiddleware";
 
-const SECRET_KEY = process.env.JWT_SECRET || 'mySuperSecretKey123';
+const SECRET_KEY = process.env.JWT_SECRET || "mySuperSecretKey123";
 
 // 1. REGISTER USER
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -14,7 +14,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(400).json({ message: 'User already exists' });
+      res.status(400).json({ message: "User already exists" });
       return;
     }
 
@@ -27,17 +27,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name,
       email,
       passwordHash,
-      role: role || 'CUSTOMER' // Default to customer if not specified
+      role: role || "CUSTOMER", // Default to customer if not specified
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: 'User registered successfully' });
+    res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: "Server error", error });
   }
 };
-
 
 // Update User Profile
 export const updateProfile = async (req: AuthRequest, res: Response) => {
@@ -50,14 +49,16 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 
     // If an image file is uploaded (handled by Multer)
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-       updateData.profileImg = (req.files[0] as any).path; 
+      updateData.profileImg = (req.files[0] as any).path;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true }).select('-password');
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).select("-password");
 
-    res.json({ message: 'Profile updated successfully', user: updatedUser });
+    res.json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error) {
-    res.status(500).json({ message: 'Profile update failed', error });
+    res.status(500).json({ message: "Profile update failed", error });
   }
 };
 
@@ -69,30 +70,30 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      res.status(400).json({ message: 'Invalid credentials' });
+      res.status(400).json({ message: "Invalid credentials" });
       return;
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      res.status(400).json({ message: 'Invalid credentials' });
+      res.status(400).json({ message: "Invalid credentials" });
       return;
     }
 
     // Generate JWT Token
     const token = jwt.sign(
-      { id: user._id, role: user.role }, 
-      SECRET_KEY, 
-      { expiresIn: '1d' } // Token expires in 1 day
+      { id: user._id, role: user.role },
+      SECRET_KEY,
+      { expiresIn: "1d" }, // Token expires in 1 day
     );
 
-    res.json({ 
-      token, 
-      user: { id: user._id, name: user.name, role: user.role } 
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, role: user.role },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
@@ -127,8 +128,10 @@ export const deleteAddress = async (req: AuthRequest, res: Response) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Filter out the address to delete
-    user.addresses = user.addresses.filter(addr => (addr as any)._id.toString() !== addressId);
-    
+    user.addresses = user.addresses.filter(
+      (addr) => (addr as any)._id.toString() !== addressId,
+    );
+
     await user.save();
 
     res.json({ message: "Address deleted", user });
@@ -157,5 +160,35 @@ export const setDefaultAddress = async (req: AuthRequest, res: Response) => {
     res.json({ message: "Default address updated", user });
   } catch (error) {
     res.status(500).json({ message: "Error updating default address", error });
+  }
+};
+
+// Change Password
+export const updatePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // 1. Verify Current Password
+    // (If user used Google Login, they might not have a password. You can handle that edge case if needed)
+    if (user.passwordHash) {
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Incorrect current password" });
+      }
+    }
+
+    // 2. Hash New Password
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
   }
 };

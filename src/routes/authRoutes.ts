@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, updateProfile, addAddress, deleteAddress, setDefaultAddress } from '../controllers/authController';
+import { register, login, updateProfile, addAddress, deleteAddress, setDefaultAddress, updatePassword } from '../controllers/authController';
 import { upload } from '../config/cloudinary';
 import { verifyToken } from '../middleware/authMiddleware';
 
@@ -15,5 +15,8 @@ router.post('/address', verifyToken, addAddress);
 router.delete('/address/:addressId', verifyToken, deleteAddress);
 
 router.put('/address/:addressId/default', verifyToken, setDefaultAddress);
+
+// Change Password
+router.put('/profile/password', verifyToken, updatePassword); 
 
 export default router;
