@@ -1,21 +1,21 @@
-import { Request, Response } from 'express';
-import User from '../models/User';
-import Order from '../models/Order';
-import Product from '../models/Product';
-import bcrypt from 'bcryptjs';
-
+import { Request, Response } from "express";
+import User from "../models/User";
+import Order from "../models/Order";
+import Product from "../models/Product";
+import bcrypt from "bcryptjs";
+import { AuthRequest } from "../middleware/authMiddleware";
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     const totalUsers = await User.countDocuments();
     const totalOrders = await Order.countDocuments();
     const totalProducts = await Product.countDocuments();
-    
+
     // Calculate Total Revenue (Sum of total_amount from 'Success' payments)
     // Note: Assuming you have 'payment_status' or just summing all for now
     const revenueAgg = await Order.aggregate([
-      { $match: { payment_status: 'Success' } }, // Optional: Filter only paid
-      { $group: { _id: null, total: { $sum: "$total_amount" } } }
+      { $match: { payment_status: "Success" } }, // Optional: Filter only paid
+      { $group: { _id: null, total: { $sum: "$total_amount" } } },
     ]);
 
     const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
@@ -24,7 +24,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalUsers,
       totalOrders,
       totalProducts,
-      totalRevenue
+      totalRevenue,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching admin stats", error });
@@ -34,7 +34,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 // 1. Get All Users (with basic search)
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Error fetching users", error });
@@ -45,11 +45,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
 export const updateUserRole = async (req: Request, res: Response) => {
   try {
     const { userId, role } = req.body;
-    
+
     // Validate Role
-    const validRoles = ['ADMIN', 'CUSTOMER', 'VENDOR', 'DELIVERY'];
+    const validRoles = ["ADMIN", "CUSTOMER", "VENDOR", "DELIVERY"];
     if (!validRoles.includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
+      return res.status(400).json({ message: "Invalid role" });
     }
 
     const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
@@ -97,7 +97,7 @@ export const createUser = async (req: Request, res: Response) => {
       name,
       email,
       passwordHash: hashedPassword,
-      role
+      role,
     });
 
     await newUser.save();
@@ -106,8 +106,86 @@ export const createUser = async (req: Request, res: Response) => {
     const userResponse = newUser.toObject();
     delete (userResponse as any).password;
 
-    res.status(201).json({ message: "User created successfully", user: userResponse });
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: userResponse });
   } catch (error) {
     res.status(500).json({ message: "Error creating user", error });
+  }
+};
+
+// 5. Get All Orders (Admin View)
+export const getAllOrders = async (req: Request, res: Response) => {
+  try {
+    const orders = await Order.find()
+      .populate("customer_id", "name email") // <--- CHANGED from 'user_id' to 'customer_id'
+      .populate("delivery_person_id", "name phone")
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching orders", error });
+  }
+};
+
+// 6. Get Available Delivery Men (For Dropdown)
+export const getDeliveryMen = async (req: Request, res: Response) => {
+  try {
+    const deliveryMen = await User.find({ role: "DELIVERY" }).select(
+      "name email phone",
+    );
+    res.json(deliveryMen);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching delivery staff", error });
+  }
+};
+
+// 7. Update Admin Profile (Name, Image)
+export const updateAdminProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, profileImg } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user?.id,
+      { name, profileImg },
+      { new: true },
+    ).select("-password"); // Don't return password
+
+    res.json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating profile", error });
+  }
+};
+
+// 8. Change Admin Password
+export const updateAdminPassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // 1. Find User (and get the password field)
+    const user = await User.findById(req.user?.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // 2. Verify Old Password
+    // Note: Use 'passwordHash' if that's your field name, or 'password' if you kept it simple.
+    // Based on your previous error, your schema uses 'passwordHash'.
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash ?? "",
+    );
+    if (!isMatch)
+      return res.status(400).json({ message: "Incorrect current password" });
+
+    // 3. Hash New Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // 4. Save
+    user.passwordHash = hashedPassword; // Update the hash
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating password", error });
   }
 };
