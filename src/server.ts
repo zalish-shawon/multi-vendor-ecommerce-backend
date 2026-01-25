@@ -10,6 +10,7 @@ import reviewRoutes from './routes/reviewRoutes';
 import statsRoutes from './routes/statsRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import profileRoutes from './routes/profileRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes)
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);

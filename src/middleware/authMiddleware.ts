@@ -37,3 +37,12 @@ export const isVendor = (req: AuthRequest, res: Response, next: NextFunction) =>
   }
   next();
 };
+
+// 3. Check Role (Is the user an Admin?)
+export const isAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Check if user exists and if role is ADMIN
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ message: 'Access denied. Admins only.' });
+  }
+  next();
+};
