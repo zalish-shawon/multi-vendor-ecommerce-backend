@@ -1,6 +1,6 @@
 import express from 'express';
-import { createProduct, deleteProduct, getAllProducts, getProductById, updateProduct } from '../controllers/productController';
-import { verifyToken, isVendor } from '../middleware/authMiddleware';
+import { AdminCreateProduct, AdminDeleteProduct, AdminUpdateProduct, createProduct, deleteProduct, getAllProducts, getProductById, updateProduct } from '../controllers/productController';
+import { verifyToken, isVendor, isAdmin } from '../middleware/authMiddleware';
 import { upload } from '../config/cloudinary';
 
 const router = express.Router();
@@ -13,5 +13,7 @@ router.get('/:id', getProductById);
 router.post('/add', verifyToken, isVendor, upload.array('images', 5), createProduct);
 router.put('/:id', verifyToken, isVendor, updateProduct);
 router.delete('/:id', verifyToken, isVendor, deleteProduct);
+
+
 
 export default router;
