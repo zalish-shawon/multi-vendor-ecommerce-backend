@@ -11,6 +11,7 @@ import statsRoutes from './routes/statsRoutes';
 import invoiceRoutes from './routes/invoiceRoutes';
 import profileRoutes from './routes/profileRoutes';
 import adminRoutes from './routes/adminRoutes';
+import vendorRoutes from './routes/vendorRoutes';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/invoice', invoiceRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/vendor', vendorRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
