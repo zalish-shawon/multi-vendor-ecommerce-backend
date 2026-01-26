@@ -4,7 +4,8 @@ import {
     updateVendorProduct, 
     deleteVendorProduct, 
     getVendorOrders, 
-    getVendorStats 
+    getVendorStats, 
+    createVendorProduct
 } from '../controllers/vendorController';
 import { verifyToken } from '../middleware/authMiddleware';
 
@@ -16,6 +17,7 @@ const isVendor = (req: any, res: any, next: any) => {
     next();
 };
 
+router.post('/products', verifyToken, isVendor, createVendorProduct);
 router.get('/stats', verifyToken, isVendor, getVendorStats);
 router.get('/products', verifyToken, isVendor, getMyProducts);
 router.put('/products/:id', verifyToken, isVendor, updateVendorProduct);

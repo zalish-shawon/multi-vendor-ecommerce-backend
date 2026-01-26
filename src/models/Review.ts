@@ -18,3 +18,6 @@ const ReviewSchema: Schema = new Schema({
 ReviewSchema.index({ user_id: 1, product_id: 1 }, { unique: true });
 
 export default mongoose.model<IReview>('Review', ReviewSchema);
+
+
+

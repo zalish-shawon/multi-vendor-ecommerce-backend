@@ -1,20 +1,14 @@
 import { Request, Response } from "express";
 import Product from "../models/Product";
 import Order from "../models/Order";
-import Vendor from "../models/Vendor"; // Ensure you have this model imported
+import Vendor from "../models/Vendor";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 // --- HELPER: Resolve Vendor ID from User ID ---
 // This bridges the gap between the User (Login) and Vendor (Profile) collections
 const getVendorId = async (userId?: string) => {
-  // If no user ID is provided, return undefined
   if (!userId) return undefined;
-
-  // 1. Try to find a Vendor profile linked to this user
   const vendorProfile = await Vendor.findOne({ user_id: userId });
-
-  // 2. If found, return the Vendor's _id (This is what products are linked to)
-  // 3. If not found, fallback to userId (Legacy support)
   return vendorProfile ? vendorProfile._id : userId;
 };
 
@@ -31,7 +25,33 @@ export const getMyProducts = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 2. Edit Product (Secure: Checks Ownership)
+// 2. CREATE PRODUCT (Added this missing function)
+export const createVendorProduct = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const realVendorId = await getVendorId(userId);
+
+    const { name, description, price, stock, category, images, specifications } = req.body;
+
+    const newProduct = await Product.create({
+      name,
+      description,
+      price,
+      stock,
+      category,
+      images,           // ✅ Saving Images array
+      specifications,   // ✅ Saving Specifications array
+      vendor_id: realVendorId // Link to Vendor
+    });
+
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error("Create Product Error:", error);
+    res.status(500).json({ message: "Error creating product", error });
+  }
+};
+
+// 3. Edit Product (Secure: Checks Ownership)
 export const updateVendorProduct = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -40,7 +60,17 @@ export const updateVendorProduct = async (req: AuthRequest, res: Response) => {
     // Find product that matches ID AND Vendor ID
     const product = await Product.findOneAndUpdate(
       { _id: id, vendor_id: realVendorId },
-      req.body,
+      { 
+        $set: {
+            name: req.body.name,
+            price: req.body.price,
+            stock: req.body.stock,
+            category: req.body.category,
+            description: req.body.description,
+            images: req.body.images,            // ✅ Update Images
+            specifications: req.body.specifications // ✅ Update Specs
+        }
+      },
       { new: true },
     );
 
@@ -54,7 +84,7 @@ export const updateVendorProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 3. Delete Product (Secure)
+// 4. Delete Product (Secure)
 export const deleteVendorProduct = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -75,9 +105,7 @@ export const deleteVendorProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 4. Get Vendor Orders & Calculate Revenue (The Smart Query)
-// ... imports
-
+// 5. Get Vendor Orders & Calculate Revenue (The Smart Query)
 export const getVendorOrders = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -95,8 +123,7 @@ export const getVendorOrders = async (req: AuthRequest, res: Response) => {
     const orders = await Order.find({
       "products.product_id": { $in: myProductIds },
     })
-      // 👇 FIX 1: Change 'user_id' to 'customer_id'
-      .populate("customer_id", "name email")
+      .populate("customer_id", "name email") // ✅ Correct field name
       .populate({
         path: "products.product_id",
         select: "name price vendor_id images",
@@ -123,8 +150,7 @@ export const getVendorOrders = async (req: AuthRequest, res: Response) => {
         return {
           _id: order._id,
           transaction_id: order.transaction_id,
-          // 👇 FIX 2: Map 'customer' to 'order.customer_id'
-          customer: order.customer_id,
+          customer: order.customer_id, // ✅ Map customer correctly
           status: (order as any).order_status,
           createdAt: (order as any).createdAt,
           items: myItems.map((item: any) => ({
@@ -145,7 +171,7 @@ export const getVendorOrders = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// 5. Dashboard Stats
+// 6. Dashboard Stats
 export const getVendorStats = async (req: AuthRequest, res: Response) => {
   try {
     const realVendorId = await getVendorId(req.user?.id);
@@ -155,7 +181,7 @@ export const getVendorStats = async (req: AuthRequest, res: Response) => {
       vendor_id: realVendorId,
     });
 
-    // 2. Calculate Revenue & Sales (Reusing logic for consistency)
+    // 2. Calculate Revenue & Sales
     const myProducts = await Product.find({ vendor_id: realVendorId }).select(
       "_id",
     );
