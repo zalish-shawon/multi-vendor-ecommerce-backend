@@ -7,7 +7,8 @@ import {
     getVendorStats, 
     createVendorProduct,
     getVendorProfile,
-    updateVendorProfile
+    updateVendorProfile,
+    changeVendorPassword
 } from '../controllers/vendorController';
 import { verifyToken } from '../middleware/authMiddleware';
 
@@ -26,7 +27,8 @@ router.put('/products/:id', verifyToken, isVendor, updateVendorProduct);
 router.delete('/products/:id', verifyToken, isVendor, deleteVendorProduct);
 router.get('/orders', verifyToken, isVendor, getVendorOrders);
 
-// Vendor Profile Routes
-router.get('/getVendor', verifyToken, isVendor, getVendorProfile);
-router.put('/updateVendor', verifyToken, isVendor, updateVendorProfile);
+// Vendor Profile & Settings
+router.get('/profile', verifyToken, isVendor, getVendorProfile);
+router.put('/profile', verifyToken, isVendor, updateVendorProfile);
+router.put('/profile/password', verifyToken, isVendor, changeVendorPassword);
 export default router;

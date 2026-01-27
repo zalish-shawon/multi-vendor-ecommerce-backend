@@ -4,6 +4,8 @@ import Order from "../models/Order";
 import Vendor from "../models/Vendor";
 import { AuthRequest } from "../middleware/authMiddleware";
 import User from "../models/User";
+import bcrypt from "bcryptjs";
+
 
 
 const getVendorId = async (userId?: string) => {
@@ -219,30 +221,65 @@ export const getVendorStats = async (req: AuthRequest, res: Response) => {
 };
 
 
-// 7. GET VENDOR PROFILE (To pre-fill the form)
+// 1. GET PROFILE
 export const getVendorProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
-    
-    // Fetch User Data (Name, Email, Image)
-    const user = await User.findById(userId).select('-password');
-    
-    // Fetch Vendor Data (Store Name, Phone, Address)
-    const vendor = await Vendor.findOne({ user_id: userId });
-
-    if (!user || !vendor) return res.status(404).json({ message: "Vendor not found" });
-
-    // Combine them into one response
-    res.json({
-      name: user.name,
-      email: user.email,
-      profileImg: user.profileImg,
-      store_name: vendor.store_name,
-      phone: vendor.phone,
-      address: vendor.addresses
-    });
+    // The ID in the token is now the Vendor ID directly
+    const vendor = await Vendor.findById(req.user?.id).select('-password');
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+    res.json(vendor);
   } catch (error) {
     res.status(500).json({ message: "Error fetching profile", error });
+  }
+};
+
+// 2. UPDATE PROFILE
+export const updateVendorProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { store_name, phone, address, store_logo, description } = req.body;
+    
+    // We update the fields directly
+    const updatedVendor = await Vendor.findByIdAndUpdate(
+      req.user?.id,
+      { 
+        store_name, 
+        phone, 
+        // We assume address is coming as an object matching the schema
+        // If frontend sends flat fields, we might need to structure it here
+        // For now, let's assume the frontend sends the structure
+        addresses: address ? [address] : undefined,
+        store_logo,
+        description
+      },
+      { new: true }
+    ).select('-password');
+
+    res.json({ message: "Profile updated", vendor: updatedVendor });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating profile", error });
+  }
+};
+
+// 3. CHANGE PASSWORD
+export const changeVendorPassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const vendor = await Vendor.findById(req.user?.id);
+
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // Verify Old Password
+    const isMatch = await bcrypt.compare(oldPassword, vendor.password);
+    if (!isMatch) return res.status(400).json({ message: "Incorrect current password" });
+
+    // Hash New Password
+    const salt = await bcrypt.genSalt(10);
+    vendor.password = await bcrypt.hash(newPassword, salt);
+    await vendor.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating password", error });
   }
 };
 
@@ -268,24 +305,24 @@ export const deleteVendor = async (req: Request, res: Response) => {
   }
 };
 
-// 8. UPDATE VENDOR PROFILE
-export const updateVendorProfile = async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.id;
-    const { name, profileImg, store_name, phone, address } = req.body;
+// // 8. UPDATE VENDOR PROFILE
+// export const updateVendorProfile = async (req: AuthRequest, res: Response) => {
+//   try {
+//     const userId = req.user?.id;
+//     const { name, profileImg, store_name, phone, address } = req.body;
 
-    // A. Update User Collection (Name, Image)
-    await User.findByIdAndUpdate(userId, { name, profileImg });
+//     // A. Update User Collection (Name, Image)
+//     await User.findByIdAndUpdate(userId, { name, profileImg });
 
-    // B. Update Vendor Collection (Store Info)
-    await Vendor.findOneAndUpdate(
-      { user_id: userId },
-      { store_name, phone, address } // Update these specific fields
-    );
+//     // B. Update Vendor Collection (Store Info)
+//     await Vendor.findOneAndUpdate(
+//       { user_id: userId },
+//       { store_name, phone, address } // Update these specific fields
+//     );
 
-    res.json({ message: "Profile updated successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to update profile", error });
-  }
-};
+//     res.json({ message: "Profile updated successfully" });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Failed to update profile", error });
+//   }
+// };

@@ -165,26 +165,30 @@ export const deleteProduct = async (req: AuthRequest, res: Response) => {
 
 export const AdminCreateProduct = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, price, category, stock, images } = req.body;
+    // 👇 Destructure specifications from body
+    const { name, price, category, stock, description, images, specifications } = req.body;
 
-    // Basic Validation
-    if (!name || !price || !category) {
-      return res.status(400).json({ message: "Name, price, and category are required" });
-    }
-
-    const product = new Product({
+    const newProduct = await Product.create({
       name,
-      description,
       price,
       category,
-      stock: stock || 0,
-      images: images || [] // Array of image URLs
+      stock,
+      description,
+      images,
+      specifications, // 👈 Pass it here
+      // vendor_id: req.user.id (if applicable)
     });
 
-    await product.save();
-    res.status(201).json({ message: "Product created", product });
-  } catch (error) {
-    res.status(500).json({ message: "Error creating product", error });
+    res.status(201).json(newProduct);
+  } catch (error: any) {
+    // 👇 ADD THIS LOG to see the real error in your terminal
+    console.error("Create Product Error:", error); 
+    
+    // Send the error message back clearly
+    res.status(500).json({ 
+        message: "Error creating product", 
+        error: error.message || error 
+    });
   }
 };
 
@@ -192,13 +196,15 @@ export const AdminCreateProduct = async (req: AuthRequest, res: Response) => {
 export const AdminUpdateProduct = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndUpdate(id, req.body, { new: true });
-    
-    if (!product) return res.status(404).json({ message: "Product not found" });
-    
-    res.json({ message: "Product updated", product });
-  } catch (error) {
-    res.status(500).json({ message: "Error updating product", error });
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id, 
+      req.body, // This will automatically include specifications if sent in body
+      { new: true }
+    );
+    res.json(updatedProduct);
+  } catch (error: any) {
+    console.error("Update Error:", error);
+    res.status(500).json({ message: "Failed to update", error: error.message });
   }
 };
 
