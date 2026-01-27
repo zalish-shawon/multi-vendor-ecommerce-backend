@@ -103,31 +103,41 @@ export const getVendorReviews = async (req: AuthRequest, res: Response) => {
 // 4. Reply to Review (Vendor Portal)
 export const replyToReview = async (req: AuthRequest, res: Response) => {
   try {
-    const { reviewId } = req.params;
+    // 👇 LOGGING ADDED
+    console.log("1. Reply Request Received");
+    console.log("   Params:", req.params);
+    console.log("   Body:", req.body);
+
+    const { reviewId } = req.params; 
     const { reply } = req.body;
     const userId = req.user?.id;
     const realVendorId = await getVendorId(userId);
 
     // A. Find the review
-    const review = await Review.findById(reviewId).populate("product_id");
-    if (!review) return res.status(404).json({ message: "Review not found" });
+    const review = await Review.findById(reviewId).populate('product_id');
+    
+    if (!review) {
+        
+        return res.status(404).json({ message: "Review not found" });
+    }
 
-    // B. Security Check: Does this product belong to this vendor?
+    // B. Security Check
     const product = review.product_id as any;
-    // Ensure we compare strings to avoid ObjectId mismatches
     if (product.vendor_id.toString() !== realVendorId?.toString()) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized: Not your product" });
+      
+        return res.status(403).json({ message: "Unauthorized: Not your product" });
     }
 
     // C. Save Reply
     (review as any).vendor_reply = reply;
     (review as any).reply_date = new Date();
-    await review.save();
+    
+    const savedReview = await review.save(); // Save and capture result
+    // console.log("✅ Reply Saved successfully:", (savedReview as any).vendor_reply);
 
-    res.json({ message: "Reply sent", review });
+    res.json({ message: "Reply sent", review: savedReview });
   } catch (error) {
+    // console.error("❌ Reply Error:", error);
     res.status(500).json({ message: "Failed to reply", error });
   }
 };

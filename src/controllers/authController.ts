@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/authMiddleware";
+import Vendor from "../models/Vendor";
 
 const SECRET_KEY = process.env.JWT_SECRET || "mySuperSecretKey123";
 
@@ -63,37 +64,65 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 };
 
 // 2. LOGIN USER
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(400).json({ message: "Invalid credentials" });
-      return;
+    // --- STRATEGY 1: Check USER Collection (Admin, Customer, Delivery) ---
+    let user: any = await User.findOne({ email });
+    let role = "";
+    let isVendor = false;
+
+    if (user) {
+      // It's a normal user
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      if (!isMatch)
+        return res.status(400).json({ message: "Invalid credentials" });
+
+      role = user.role;
     }
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      res.status(400).json({ message: "Invalid credentials" });
-      return;
+    // --- STRATEGY 2: Check VENDOR Collection ---
+    else {
+      const vendor = await Vendor.findOne({ email });
+
+      if (!vendor) {
+        // Not in User AND not in Vendor
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      // It's a vendor
+      const isMatch = await bcrypt.compare(password, vendor.password);
+      if (!isMatch)
+        return res.status(400).json({ message: "Invalid credentials" });
+
+      user = vendor; // Treat vendor as the "user" object for token generation
+      role = "VENDOR"; // Force role
+      isVendor = true;
     }
 
-    // Generate JWT Token
+    // --- GENERATE TOKEN ---
+    // We use the ID found (whether User ID or Vendor ID)
     const token = jwt.sign(
-      { id: user._id, role: user.role },
-      SECRET_KEY,
-      { expiresIn: "1d" }, // Token expires in 1 day
+      { id: user._id, role: role },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" },
     );
 
+    // Response
     res.json({
       token,
-      user: { id: user._id, name: user.name, role: user.role },
+      user: {
+        _id: user._id,
+        name: isVendor ? (user as any).store_name : user.name, // Handle difference in name fields
+        email: user.email,
+        role: role,
+        profileImg: isVendor ? (user as any).store_logo : user.profileImg,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Login failed", error });
   }
 };
 
@@ -190,5 +219,40 @@ export const updatePassword = async (req: AuthRequest, res: Response) => {
     res.json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
+  }
+};
+
+export const vendorLogin = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Check VENDOR collection
+    const vendor = await Vendor.findOne({ email });
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // 2. Verify Password
+    const isMatch = await bcrypt.compare(password, vendor.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    // 3. Generate Token
+    // We add 'role: vendor' to the token payload
+    const token = jwt.sign(
+      { id: vendor._id, role: "vendor" },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" },
+    );
+
+    res.json({
+      token,
+      user: {
+        _id: vendor._id,
+        name: vendor.store_name, // Use store name as their display name
+        email: vendor.email,
+        role: "vendor",
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Login failed", error });
   }
 };

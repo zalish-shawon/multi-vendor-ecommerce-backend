@@ -4,6 +4,7 @@ import Order from "../models/Order";
 import Product from "../models/Product";
 import bcrypt from "bcryptjs";
 import { AuthRequest } from "../middleware/authMiddleware";
+import Vendor from "../models/Vendor";
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -111,6 +112,51 @@ export const createUser = async (req: Request, res: Response) => {
       .json({ message: "User created successfully", user: userResponse });
   } catch (error) {
     res.status(500).json({ message: "Error creating user", error });
+  }
+};
+
+
+// Create Vendor (Directly in Vendor Collection)
+export const createVendor = async (req: Request, res: Response) => {
+  try {
+    const { 
+      store_name, 
+      email, 
+      password, 
+      phone, 
+      address, // Assuming simplistic address from form
+      bkash_number 
+    } = req.body;
+
+    // 1. Check if Email or Store Name exists
+    const existingVendor = await Vendor.findOne({ 
+        $or: [{ email }, { store_name }] 
+    });
+    
+    if (existingVendor) {
+        return res.status(400).json({ message: "Vendor email or store name already exists" });
+    }
+
+    // 2. Hash Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 3. Create Vendor
+    const newVendor = await Vendor.create({
+      store_name,
+      email,
+      password: hashedPassword,
+      phone,
+      bkash_number,
+      is_verified: true, // Verified immediately since Admin created it
+      addresses: address ? [{ ...address, isDefault: true }] : []
+    });
+
+    res.status(201).json({ message: "Vendor created successfully", vendor: newVendor });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to create vendor", error });
   }
 };
 
