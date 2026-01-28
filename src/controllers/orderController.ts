@@ -319,11 +319,6 @@ export const retryPayment = async (req: AuthRequest, res: Response) => {
         const order = await Order.findById(req.params.id);
         if(!order) return res.status(404).json({message: "Order not found"});
 
-        // ... (Include your SSLCommerz Init Logic here, similar to createOrder)
-        // ... (Using the EXISTING transaction_id or generating a new suffix like TXN-123-RETRY)
-        
-        // Quick Fix: For this tutorial, we will rely on the frontend creating a *new* order for "Pay Later" 
-        // or effectively re-ordering. But proper "Retry" requires re-initializing SSLCommerz with the same Order ID.
         
         // Let's return a specific message for now:
         res.status(501).json({ message: "Retry feature coming soon" }); 

@@ -37,7 +37,7 @@ router.post('/payment/success/:tranId', paymentSuccess);
 router.post('/payment/fail/:tranId', paymentFail);
 
 // Cancel Order (Customer)
-router.delete('/:id', verifyToken, cancelOrder)
+router.delete('/payment/cancel/:id', verifyToken, cancelOrder)
 
 
 

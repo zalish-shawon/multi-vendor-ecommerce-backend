@@ -15,7 +15,7 @@ export interface IVendor extends Document {
   }[];
   bkash_number?: string;
   is_verified: boolean;
-  role: string; // Add this so middleware knows it's a 'vendor'
+  role: string; 
 }
 
 const VendorSchema: Schema = new Schema({
