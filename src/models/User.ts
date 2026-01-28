@@ -37,7 +37,9 @@ const UserSchema: Schema = new Schema({
         postalCode: { type: String, required: true },
         isDefault: { type: Boolean, default: false }
       }
-    ]
+    ],
+    login_otp: { type: String },
+    otp_expires: { type: Date },
   }, 
  { timestamps: true });
 

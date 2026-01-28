@@ -6,29 +6,63 @@ import bcrypt from "bcryptjs";
 import { AuthRequest } from "../middleware/authMiddleware";
 import Vendor from "../models/Vendor";
 
-export const getDashboardStats = async (req: Request, res: Response) => {
+// 1. GET DASHBOARD STATS & CHART DATA
+export const getAdminStats = async (req: Request, res: Response) => {
   try {
-    const totalUsers = await User.countDocuments();
+    // A. Basic Counters
+    const totalUsers = await User.countDocuments({ role: 'CUSTOMER' });
+    const totalVendors = await Vendor.countDocuments();
     const totalOrders = await Order.countDocuments();
     const totalProducts = await Product.countDocuments();
 
-    // Calculate Total Revenue (Sum of total_amount from 'Success' payments)
-    // Note: Assuming you have 'payment_status' or just summing all for now
+    // B. Calculate Total Revenue (Only Paid/Delivered orders)
     const revenueAgg = await Order.aggregate([
-      { $match: { payment_status: "Success" } }, // Optional: Filter only paid
-      { $group: { _id: null, total: { $sum: "$total_amount" } } },
+      { $match: { payment_status: 'Paid' } }, // Only count paid orders
+      { $group: { _id: null, total: { $sum: '$total_amount' } } }
+    ]);
+    const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
+
+    // C. CHART DATA: Last 7 Days Revenue
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const revenueChart = await Order.aggregate([
+      { 
+        $match: { 
+          payment_status: 'Paid',
+          createdAt: { $gte: sevenDaysAgo } 
+        } 
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          revenue: { $sum: "$total_amount" },
+          orders: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } } // Sort by date ascending
     ]);
 
-    const totalRevenue = revenueAgg.length > 0 ? revenueAgg[0].total : 0;
+    // D. RECENT ORDERS (Last 5)
+    const recentOrders = await Order.find()
+      .select('_id total_amount payment_status order_status createdAt')
+      .populate('customer_id', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(5);
 
     res.json({
       totalUsers,
+      totalVendors,
       totalOrders,
       totalProducts,
       totalRevenue,
+      revenueChart, // Array for the graph
+      recentOrders  // Array for the list
     });
+
   } catch (error) {
-    res.status(500).json({ message: "Error fetching admin stats", error });
+    console.error(error);
+    res.status(500).json({ message: "Failed to load stats", error });
   }
 };
 

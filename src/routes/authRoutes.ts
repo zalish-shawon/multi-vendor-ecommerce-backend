@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, updateProfile, addAddress, deleteAddress, setDefaultAddress, updatePassword, vendorLogin } from '../controllers/authController';
+import { register, login, updateProfile, addAddress, deleteAddress, setDefaultAddress, updatePassword, vendorLogin, verifyOtp, resendOtp } from '../controllers/authController';
 import { upload } from '../config/cloudinary';
 import { verifyToken } from '../middleware/authMiddleware';
 
@@ -20,5 +20,10 @@ router.put('/address/:addressId/default', verifyToken, setDefaultAddress);
 router.put('/profile/password', verifyToken, updatePassword);
 
 router.post('/vendor/login', vendorLogin); // New separate login route
+
+// OTP Verification
+router.post('/verify-otp', verifyOtp);
+// Resend OTP
+router.post('/resend-otp', resendOtp);
 
 export default router;
