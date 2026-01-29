@@ -20,8 +20,11 @@ const isVendor = (req: any, res: any, next: any) => {
     next();
 };
 
+// Vendor Product Management
 router.post('/products', verifyToken, isVendor, createVendorProduct);
+// Vendor Dashboard & Orders
 router.get('/stats', verifyToken, isVendor, getVendorStats);
+// CRUD Operations for Vendor Products
 router.get('/products', verifyToken, isVendor, getMyProducts);
 router.put('/products/:id', verifyToken, isVendor, updateVendorProduct);
 router.delete('/products/:id', verifyToken, isVendor, deleteVendorProduct);
