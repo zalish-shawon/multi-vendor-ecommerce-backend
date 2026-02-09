@@ -27,7 +27,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             totalUsers, 
             totalProducts, 
             totalOrders, 
-            totalRevenue 
+            totalRevenue
         });
     }
 
