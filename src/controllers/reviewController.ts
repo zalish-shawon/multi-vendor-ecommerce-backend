@@ -104,9 +104,9 @@ export const getVendorReviews = async (req: AuthRequest, res: Response) => {
 export const replyToReview = async (req: AuthRequest, res: Response) => {
   try {
     // 👇 LOGGING ADDED
-    console.log("1. Reply Request Received");
-    console.log("   Params:", req.params);
-    console.log("   Body:", req.body);
+    // console.log("1. Reply Request Received");
+    // console.log("   Params:", req.params);
+    // console.log("   Body:", req.body);
 
     const { reviewId } = req.params; 
     const { reply } = req.body;
