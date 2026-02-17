@@ -1,8 +1,5 @@
 import express from "express";
 import {
-  AdminCreateProduct,
-  AdminDeleteProduct,
-  AdminUpdateProduct,
   createProduct,
   deleteProduct,
   getAllProducts,
