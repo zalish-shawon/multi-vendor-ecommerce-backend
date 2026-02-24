@@ -147,12 +147,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
       const vendor = await Vendor.findOne({ user_id: userId });
       if (!vendor) return res.json([]);
 
-      // Magic Query: Find orders where the 'products' array contains this vendor's product
-      // (Note: This is a simplified version. In a real heavy app, you'd filter the specific sub-items)
-      // For now, we will return orders that contain *at least one* product from this vendor.
-      // Note: This requires advanced aggregation to show ONLY the vendor's items,
-      // but for this stage, letting them see the order is acceptable.
-      // A better approach for Vendors is to find products they own first.
+
       const vendorProducts = await Product.find({
         vendor_id: vendor._id,
       }).select("_id");
